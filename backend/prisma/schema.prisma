@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  Pending
+  Paid
+  Delivered
+  Cancelled
+}
+
+enum PaymentGateway {
+  PROMPTPAY
+  TRUEMONEY
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  passwordHash  String
+  walletBalance Float    @default(0)
+  role          UserRole @default(USER)
+  createdAt     DateTime @default(now())
+  orders        Order[]
+}
+
+model Game {
+  id        String    @id @default(cuid())
+  name      String
+  uidLabel  String
+  imageUrl  String
+  category  String
+  createdAt DateTime  @default(now())
+  packages  Package[]
+  orders    Order[]
+}
+
+model Package {
+  id         String   @id @default(cuid())
+  gameId     String
+  game       Game     @relation(fields: [gameId], references: [id])
+  title      String
+  priceTHB   Float
+  coinAmount Int
+  createdAt  DateTime @default(now())
+  orders     Order[]
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  gameId        String
+  game          Game          @relation(fields: [gameId], references: [id])
+  packageId     String
+  package       Package       @relation(fields: [packageId], references: [id])
+  uid           String
+  paymentMethod PaymentGateway
+  status        OrderStatus   @default(Pending)
+  txRef         String        @default(uuid())
+  createdAt     DateTime      @default(now())
+  payment       Payment?
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  orderId   String        @unique
+  order     Order         @relation(fields: [orderId], references: [id])
+  gateway   PaymentGateway
+  status    String
+  amount    Float
+  payload   Json
+  createdAt DateTime       @default(now())
+}
